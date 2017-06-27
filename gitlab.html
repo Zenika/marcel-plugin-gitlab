@@ -39,7 +39,9 @@
     <ul>
       <template is="dom-repeat" items="[[users]]" as="user">
         <li>
-          {{user}}
+          <img src="[[user.avatar]]" alt="" />
+          <span>{{user.name}}</span>
+          <span class="number">{{user.contributions}}</span>
         </li>
       </template>
     </ul>
@@ -52,8 +54,10 @@
 
         static get properties () {
           return {
+            contribAPI: String,
             userAPI: String,
             usernames: Array,
+            users: Array,
             token: String 
           }
         }
@@ -62,6 +66,9 @@
           super.connectedCallback()
 
           this.userAPI = 'https://gitlab.com/api/v4/users?username=';
+          this.contribAPI = 'https://gitlab.com/api/v4/users/';
+
+          this.users = []
 
           this._fetchContributors();
         }
@@ -71,13 +78,42 @@
           let promises = [];
 
           this.usernames.forEach(username => {
-            this._getUserInfo(username)
-                .then(user => console.log(user))
-                .catch(err => console.log(err))
+            promises.push(
+              this._getUserInfo(username)
+                  .then(user => this._getUserContributions(user[0]))
+                  .then(infosAndContrib => finalUsers.push(infosAndContrib))
+                  .catch(err => console.log(err))
+            )
           });
+
+          Promise.all(promises).then(() => {
+            finalUsers.map(contribsAndUser => {
+              let nbContributions = 0;
+              let contribs = contribsAndUser.contribs;
+
+              contribs
+                .filter(contrib => contrib.action_name === 'pushed to' || contrib.action_name === 'pushed new')
+                .map(contrib => nbContributions += contrib.data.commits.length)
+              if (nbContributions === 0) {
+                return;
+              }  
+              let avatar_url = contribsAndUser.user.avatar_url;
+              this.users.push({
+                name: contribsAndUser.user.name,
+                contributions: nbContributions,
+                avatar: avatar_url
+              })
+              this.users.sort((a, b) => b.contributions - a.contributions);
+              this.users = this.users.slice(0,5);
+            })
+          })
         }
 
-
+        _getUserContributions (user) {
+          return fetch(this._getRequest(this.contribAPI + user.id + '/events?after=' + this._getDate() + '-01'))
+                      .then(res => res.json())
+                      .then(res => { return { contribs: res, user } })
+        }
 
         _getUserInfo (username) {
           return fetch(this._getRequest(this.userAPI + username))
@@ -89,6 +125,11 @@
             'PRIVATE-TOKEN': this.token
           });
           return new Request(url, {headers})
+        }
+
+        _getDate() {
+          let today = new Date();
+          return `${today.getFullYear()}-${("0" + (today.getMonth() + 1)).slice(-2)}`;
         }
       }
 
