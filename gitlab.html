@@ -1,0 +1,98 @@
+<link rel="import" href="/plugins/shared-styles/shared-styles.html">
+<link rel="import" href="/plugins/vendors/font-awesome/font-awesome.html">
+
+<dom-module id="gitlab-item">
+  <template>
+    <style include="shared-styles"></style>
+    <style include="font-awesome"></style>
+    <style>
+      h2, span{
+        color: var(--secondary-color);
+        font-weight: 300;
+      }
+
+      ul {
+          list-style-type: none;
+          padding-left: 0;
+      }
+      ul li{
+          display: flex;
+      }
+      ul li > *{
+          padding: 5px;
+      }
+      img{
+          height: 30px;
+          width: 30px;
+          border-radius: 50%;
+      }
+      span{
+          line-height: 30px;
+      }
+      .number{
+        font-weight: bold;
+      }
+    </style>
+
+    <h1>Gitlab</h1>
+    <h2>Top contributors <i class="fa fa-gitlab"></i></h2>
+    <ul>
+      <template is="dom-repeat" items="[[users]]" as="user">
+        <li>
+          {{user}}
+        </li>
+      </template>
+    </ul>
+  </template>
+
+  <script>
+    (() => {
+      class Gitlab extends Polymer.Element {
+        static get is () { return 'gitlab-item' }
+
+        static get properties () {
+          return {
+            userAPI: String,
+            usernames: Array,
+            token: String 
+          }
+        }
+
+        connectedCallback () {
+          super.connectedCallback()
+
+          this.userAPI = 'https://gitlab.com/api/v4/users?username=';
+
+          this._fetchContributors();
+        }
+
+        _fetchContributors () {
+          let finalUsers = [];
+          let promises = [];
+
+          this.usernames.forEach(username => {
+            this._getUserInfo(username)
+                .then(user => console.log(user))
+                .catch(err => console.log(err))
+          });
+        }
+
+
+
+        _getUserInfo (username) {
+          return fetch(this._getRequest(this.userAPI + username))
+                      .then(res => res.json())
+        }
+
+        _getRequest (url) {
+          const headers = new Headers({
+            'PRIVATE-TOKEN': this.token
+          });
+          return new Request(url, {headers})
+        }
+      }
+
+      customElements.define(Gitlab.is, Gitlab);
+    })();
+  </script>
+</dom-module>
