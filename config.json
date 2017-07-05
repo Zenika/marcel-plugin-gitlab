@@ -1,0 +1,14 @@
+{
+  "name": "Gitlab",
+  "description": "Displays the contributions of a list of gitlab users",
+  "elementName": "marcel-plugin-gitlab",
+  "files": ["index.html"],
+  "props": [
+    { 
+      "name": "token",
+      "description": "Token for gitlab authentication", 
+      "type": "String", 
+      "defaultValue": ""
+    }
+  ]
+}
